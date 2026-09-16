@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* KAIZEN palette, taken from the lion logo: near-black navy, brushed steel,
+   and the electric cyan of its glow. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Exo 2", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink-950: #03080f;
+  --color-ink-900: #06101a;
+  --color-ink-800: #0b1a28;
+  --color-ink-700: #12263a;
+
+  --color-steel-100: #e8eef4;
+  --color-steel-200: #cfdbe6;
+  --color-steel-300: #b3c3d1;
+  --color-steel-400: #8ea3b6;
+  --color-steel-500: #6f869b;
+
+  --color-glow-200: #bae9fd;
+  --color-glow-300: #7dd3fc;
+  --color-glow-400: #38bdf8;
+  --color-glow-500: #0ea5e9;
+  --color-glow-600: #0284c7;
+}
+
+html {
+  background: var(--color-ink-950);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  /* Keeps anchored sections clear of the sticky header. */
+  scroll-padding-top: 5rem;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-ink-950);
+  color: var(--color-steel-100);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgb(56 189 248 / 0.35);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-glow-400);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-ink-950 bg-linear-to-b from-glow-300 to-glow-400 shadow-[0_10px_30px_-10px_rgb(56_189_248/0.7)] transition hover:from-glow-200 hover:to-glow-300 active:translate-y-px;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-steel-100 transition hover:border-glow-400/40 hover:bg-glow-400/10;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.22em] text-glow-400;
+  }
+  .panel {
+    @apply rounded-2xl border border-white/[0.07] bg-linear-to-b from-white/[0.045] to-white/[0.01];
+  }
+  .text-gradient {
+    @apply bg-linear-to-r from-steel-100 via-glow-300 to-glow-400 bg-clip-text text-transparent;
+  }
+}

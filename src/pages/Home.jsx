@@ -4,18 +4,20 @@ import lion from "../assets/kaizen-lion.jpg"
 import ListingCard from "../components/ListingCard"
 import InstallGuide from "../components/InstallGuide"
 import { useDocumentTitle, useListings } from "../lib/hooks"
-import { PLATFORMS, PLATFORM_ORDER, UNSUPPORTED, joinLabels } from "../lib/platforms"
+import { OS_ICONS } from "../lib/icons"
+import { OS_ORDER, joinOsLabels, osOf, visitorLabel } from "../lib/targets"
 
-export default function Home({ platform }) {
+export default function Home({ visitor }) {
   useDocumentTitle(null)
   const { listings, loading, error, retry } = useListings()
 
-  // Only name platforms the store can actually serve right now.
+  // Only name operating systems the store can actually serve right now.
   const available = useMemo(
-    () => PLATFORM_ORDER.filter((p) => listings.some((l) => l.platforms.some((f) => f.platform === p))),
+    () => OS_ORDER.filter((os) => listings.some((l) => l.platforms.some((f) => osOf(f) === os))),
     [listings],
   )
-  const detected = PLATFORMS[platform] || UNSUPPORTED[platform]
+  const DetectedIcon = OS_ICONS[visitor.os]
+  const detectedLabel = visitorLabel(visitor)
 
   return (
     <>
@@ -31,17 +33,17 @@ export default function Home({ platform }) {
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-steel-300 sm:text-lg">
             {available.length
-              ? `Descarga nuestras aplicaciones para ${joinLabels(available)}. Siempre la versión más reciente, directamente desde la fuente oficial.`
+              ? `Descarga nuestras aplicaciones para ${joinOsLabels(available)}. Siempre la versión más reciente, directamente desde la fuente oficial.`
               : "Descarga nuestras aplicaciones oficiales. Siempre la versión más reciente, directamente desde la fuente oficial."}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
             <a href="#apps" className="btn-primary">
               Ver aplicaciones <FiArrowDown aria-hidden="true" />
             </a>
-            {detected && (
+            {detectedLabel && (
               <span className="flex items-center gap-2 text-sm text-steel-400">
-                <detected.icon aria-hidden="true" className="text-steel-300" />
-                Estás usando {detected.label}
+                {DetectedIcon && <DetectedIcon aria-hidden="true" className="text-steel-300" />}
+                Estás usando {detectedLabel}
               </span>
             )}
           </div>
@@ -102,7 +104,7 @@ export default function Home({ platform }) {
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {listings.map((listing) => (
-                <ListingCard key={listing.slug} listing={listing} platform={platform} />
+                <ListingCard key={listing.slug} listing={listing} visitor={visitor} />
               ))}
             </div>
           )}
@@ -111,7 +113,7 @@ export default function Home({ platform }) {
 
       {/* ── Install help ─────────────────────────────────────────────── */}
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-        <InstallGuide id="instalar" preferred={platform} platforms={available.length ? available : PLATFORM_ORDER} />
+        <InstallGuide id="instalar" preferred={visitor.os} systems={available.length ? available : OS_ORDER} />
       </div>
     </>
   )

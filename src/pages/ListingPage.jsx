@@ -8,10 +8,20 @@ import InstallGuide from "../components/InstallGuide"
 import { downloadUrl, fetchListing } from "../lib/api"
 import { formatBytes, formatDate } from "../lib/format"
 import { cachedListing, useDocumentTitle } from "../lib/hooks"
-import { PLATFORMS, UNSUPPORTED } from "../lib/platforms"
+import { OS_ICONS } from "../lib/icons"
+import { OS_ORDER, UNSUPPORTED_OS, labelOf, osOf, recommend } from "../lib/targets"
 import NotFound from "./NotFound"
 
-export default function ListingPage({ platform }) {
+function Notice({ children }) {
+  return (
+    <div className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-steel-300">
+      <FiInfo className="mt-0.5 shrink-0 text-glow-300" aria-hidden="true" />
+      <p>{children}</p>
+    </div>
+  )
+}
+
+export default function ListingPage({ visitor }) {
   const { slug } = useParams()
   // Render straight from the catalogue when we came from it; always revalidate.
   const [state, setState] = useState(() => ({ slug, listing: cachedListing(slug), error: null }))
@@ -60,9 +70,13 @@ export default function ListingPage({ platform }) {
   }
 
   const files = listing.platforms
-  const recommended = files.find((f) => f.platform === platform)
-  const unsupported = UNSUPPORTED[platform]
+  const suggestion = recommend(files, visitor)
+  const unsupported = UNSUPPORTED_OS[visitor.os]
   const startedFile = files.find((f) => f.platform === started)
+  // A Mac known to be Intel, while the only Mac build is for Apple Silicon.
+  const noBuildForThisMac =
+    visitor.os === "macos" && suggestion.confident && !suggestion.files.length && files.some((f) => osOf(f) === "macos")
+  const systems = OS_ORDER.filter((os) => files.some((f) => osOf(f) === os))
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
@@ -88,13 +102,33 @@ export default function ListingPage({ platform }) {
         {/* ── Downloads (first on phones, sidebar on desktop) ──────────── */}
         <aside className="min-w-0 lg:order-2">
           <div className="panel space-y-5 p-5 lg:sticky lg:top-24">
-            {recommended && (
+            {suggestion.files.length > 0 && (
               <div className="space-y-3">
-                <p className="eyebrow">Recomendado para tu dispositivo</p>
-                <DownloadButton slug={listing.slug} file={recommended} className="w-full" onStart={setStarted} />
-                <p className="text-xs text-steel-500">
-                  Versión {recommended.version} · {recommended.filename}
-                </p>
+                <p className="eyebrow">{suggestion.confident ? "Recomendado para tu dispositivo" : "Elige la versión de tu Mac"}</p>
+                {suggestion.files.map((file) => (
+                  <DownloadButton key={file.platform} slug={listing.slug} file={file} className="w-full" onStart={setStarted} />
+                ))}
+                {suggestion.confident && (
+                  <p className="text-xs text-steel-500">
+                    Versión {suggestion.files[0].version} · {suggestion.files[0].filename}
+                  </p>
+                )}
+                {suggestion.rosetta && (
+                  <p className="text-xs leading-relaxed text-steel-400">
+                    Aún no hay versión para Apple Silicon: la versión para Intel funciona en tu Mac mediante Rosetta 2.
+                  </p>
+                )}
+                {!suggestion.confident && (
+                  // The browser would not say which processor this Mac has (Safari
+                  // and Firefox never do), so the visitor has to look it up.
+                  <p className="flex gap-2 text-xs leading-relaxed text-steel-400">
+                    <FiInfo className="mt-0.5 shrink-0 text-glow-300" aria-hidden="true" />
+                    <span>
+                      ¿Qué Mac tienes? En el menú Apple › Acerca de esta Mac: si dice «Chip Apple M…», elige Apple Silicon; si dice
+                      «Procesador Intel», elige Intel.
+                    </span>
+                  </p>
+                )}
               </div>
             )}
 
@@ -102,7 +136,7 @@ export default function ListingPage({ platform }) {
               <div role="status" className="flex gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-sm">
                 <FiCheckCircle className="mt-0.5 shrink-0 text-emerald-300" aria-hidden="true" />
                 <p className="text-emerald-100/90">
-                  Tu descarga de {PLATFORMS[startedFile.platform]?.label} está comenzando.{" "}
+                  Tu descarga para {labelOf(startedFile)} está comenzando.{" "}
                   <a href={downloadUrl(listing.slug, startedFile.platform)} rel="nofollow" className="underline underline-offset-2">
                     ¿No empezó? Inténtalo de nuevo
                   </a>
@@ -110,14 +144,13 @@ export default function ListingPage({ platform }) {
               </div>
             )}
 
+            {noBuildForThisMac && <Notice>Todavía no hay versión para Mac con Intel: la disponible solo funciona en Mac con Apple Silicon.</Notice>}
+
             {unsupported && (
-              <div className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-steel-300">
-                <FiInfo className="mt-0.5 shrink-0 text-glow-300" aria-hidden="true" />
-                <p>
-                  No hay versión para {unsupported.label}.
-                  {files.length > 0 && " Abre esta página desde un dispositivo compatible para instalarla."}
-                </p>
-              </div>
+              <Notice>
+                No hay versión para {unsupported.label}.
+                {files.length > 0 && " Abre esta página desde un dispositivo compatible para instalarla."}
+              </Notice>
             )}
 
             <div>
@@ -125,8 +158,7 @@ export default function ListingPage({ platform }) {
               {files.length ? (
                 <ul className="mt-3 divide-y divide-white/5">
                   {files.map((file) => {
-                    const meta = PLATFORMS[file.platform]
-                    const Icon = meta?.icon
+                    const Icon = OS_ICONS[osOf(file)]
                     return (
                       <li key={file.platform} className="flex items-center justify-between gap-3 py-3">
                         <div className="flex min-w-0 items-center gap-3">
@@ -134,7 +166,7 @@ export default function ListingPage({ platform }) {
                             {Icon && <Icon aria-hidden="true" className="text-steel-200" />}
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-steel-100">{meta?.label || file.label}</p>
+                            <p className="text-sm font-medium text-steel-100">{labelOf(file)}</p>
                             <p className="truncate text-xs text-steel-500">
                               v{file.version} · {formatBytes(file.size)} · {formatDate(file.uploaded_at)}
                             </p>
@@ -144,7 +176,7 @@ export default function ListingPage({ platform }) {
                           href={downloadUrl(listing.slug, file.platform)}
                           rel="nofollow"
                           onClick={() => setStarted(file.platform)}
-                          aria-label={`Descargar ${listing.name} para ${meta?.label || file.label}`}
+                          aria-label={`Descargar ${listing.name} para ${labelOf(file)}`}
                           className="btn-secondary shrink-0 !px-3 !py-2"
                         >
                           Descargar
@@ -172,8 +204,8 @@ export default function ListingPage({ platform }) {
           {files.length > 0 && (
             <InstallGuide
               key={started || "guide"}
-              platforms={files.map((f) => f.platform)}
-              preferred={started || platform}
+              systems={systems}
+              preferred={osOf(startedFile) || visitor.os}
               title={`Cómo instalar ${listing.name}`}
             />
           )}

@@ -2,10 +2,17 @@ import { Link } from "react-router-dom"
 import { FiArrowRight } from "react-icons/fi"
 import AppIcon from "./AppIcon"
 import DownloadButton from "./DownloadButton"
-import { PLATFORMS } from "../lib/platforms"
+import { OS_ICONS } from "../lib/icons"
+import { osOf, recommend, shortOf } from "../lib/targets"
 
-export default function ListingCard({ listing, platform }) {
-  const recommended = listing.platforms.find((p) => p.platform === platform)
+export default function ListingCard({ listing, visitor }) {
+  const suggestion = recommend(listing.platforms, visitor)
+  const suggested = new Set(suggestion.files.map((f) => f.platform))
+  // A card has room for one button, so it only downloads directly when there is
+  // exactly one right answer. Choosing between Mac builds, or explaining that an
+  // Intel build runs through Rosetta, happens on the app's own page.
+  const direct =
+    suggestion.confident && suggestion.files.length === 1 && !suggestion.rosetta ? suggestion.files[0] : null
   const detailsUrl = `/app/${listing.slug}`
 
   return (
@@ -27,16 +34,16 @@ export default function ListingCard({ listing, platform }) {
       <ul className="mt-4 flex flex-wrap gap-2" aria-label="Plataformas disponibles">
         {listing.platforms.length ? (
           listing.platforms.map((file) => {
-            const Icon = PLATFORMS[file.platform]?.icon
+            const Icon = OS_ICONS[osOf(file)]
             return (
               <li
                 key={file.platform}
                 className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ${
-                  file.platform === platform ? "border-glow-400/40 bg-glow-400/10 text-glow-200" : "border-white/10 text-steel-300"
+                  suggested.has(file.platform) ? "border-glow-400/40 bg-glow-400/10 text-glow-200" : "border-white/10 text-steel-300"
                 }`}
               >
                 {Icon && <Icon aria-hidden="true" />}
-                <span>{PLATFORMS[file.platform]?.label || file.label}</span>
+                <span>{shortOf(file)}</span>
                 {file.version && <span className="text-steel-500">v{file.version}</span>}
               </li>
             )
@@ -47,8 +54,8 @@ export default function ListingCard({ listing, platform }) {
       </ul>
 
       <div className="relative z-10 mt-auto flex flex-wrap items-center gap-2 pt-5">
-        {recommended ? (
-          <DownloadButton slug={listing.slug} file={recommended} showSize={false} className="flex-1 sm:flex-none" />
+        {direct ? (
+          <DownloadButton slug={listing.slug} file={direct} showSize={false} className="flex-1 sm:flex-none" />
         ) : (
           listing.platforms.length > 0 && (
             <Link to={detailsUrl} className="btn-primary flex-1 sm:flex-none">

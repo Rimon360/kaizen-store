@@ -1,15 +1,33 @@
+import { useEffect, useState } from "react"
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { Backdrop, Footer, Header, ScrollManager } from "./components/Layout"
-import { detectPlatform } from "./lib/platforms"
+import { detectMacArch, detectOs } from "./lib/targets"
 import Home from "./pages/Home"
 import ListingPage from "./pages/ListingPage"
 import NotFound from "./pages/NotFound"
 
-// Detected once: the visitor's platform decides which download is offered first.
-const platform = detectPlatform()
 const basename = import.meta.env.BASE_URL.replace(/\/+$/, "") || "/"
 
+// The visitor's device decides which download is offered first. The OS is known
+// at once; a Mac's processor arrives a moment later, and only from browsers
+// that expose it — until then (or forever) the store lets the visitor choose.
+function useVisitor() {
+  const [visitor, setVisitor] = useState(() => ({ os: detectOs(), arch: null }))
+  useEffect(() => {
+    if (visitor.os !== "macos") return
+    let active = true
+    detectMacArch().then((arch) => {
+      if (active && arch) setVisitor((prev) => ({ ...prev, arch }))
+    })
+    return () => {
+      active = false
+    }
+  }, [visitor.os])
+  return visitor
+}
+
 export default function App() {
+  const visitor = useVisitor()
   return (
     <BrowserRouter basename={basename}>
       <ScrollManager />
@@ -20,8 +38,8 @@ export default function App() {
         <Header />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<Home platform={platform} />} />
-            <Route path="/app/:slug" element={<ListingPage platform={platform} />} />
+            <Route path="/" element={<Home visitor={visitor} />} />
+            <Route path="/app/:slug" element={<ListingPage visitor={visitor} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

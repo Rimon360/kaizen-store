@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { INSTALL_STEPS, PLATFORMS, PLATFORM_ORDER } from "../lib/platforms"
+import { OS_ICONS } from "../lib/icons"
+import { INSTALL_STEPS, OS, OS_ORDER } from "../lib/targets"
 
-// Step-by-step install help, one tab per platform. Opens on the visitor's own
-// platform when it is one of the tabs.
-export default function InstallGuide({ platforms = PLATFORM_ORDER, preferred, id, title = "Cómo instalar" }) {
-  const tabs = platforms.filter((p) => INSTALL_STEPS[p])
+// Step-by-step install help, one tab per operating system (both Mac builds
+// share one tab). Opens on the visitor's own OS when it is one of the tabs.
+export default function InstallGuide({ systems = OS_ORDER, preferred, id, title = "Cómo instalar" }) {
+  const tabs = OS_ORDER.filter((os) => systems.includes(os) && INSTALL_STEPS[os])
   const [picked, setPicked] = useState(null)
   const active = picked && tabs.includes(picked) ? picked : tabs.includes(preferred) ? preferred : tabs[0]
   if (!tabs.length) return null
@@ -14,22 +15,22 @@ export default function InstallGuide({ platforms = PLATFORM_ORDER, preferred, id
       <h2 id={`${id || "install"}-title`} className="font-display text-xl font-bold text-steel-100">
         {title}
       </h2>
-      <div role="tablist" aria-label="Plataforma" className="mt-4 flex flex-wrap gap-2">
-        {tabs.map((p) => {
-          const Icon = PLATFORMS[p].icon
-          const selected = p === active
+      <div role="tablist" aria-label="Sistema operativo" className="mt-4 flex flex-wrap gap-2">
+        {tabs.map((os) => {
+          const Icon = OS_ICONS[os]
+          const selected = os === active
           return (
             <button
-              key={p}
+              key={os}
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => setPicked(p)}
+              onClick={() => setPicked(os)}
               className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition ${
                 selected ? "border-glow-400/50 bg-glow-400/15 text-glow-200" : "border-white/10 text-steel-400 hover:text-steel-100"
               }`}
             >
-              <Icon aria-hidden="true" /> {PLATFORMS[p].label}
+              <Icon aria-hidden="true" /> {OS[os].label}
             </button>
           )
         })}
